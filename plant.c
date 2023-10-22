@@ -69,25 +69,25 @@ int pid=fork();
 
 
 if(pid==0){
+    
+  
+
     int threadX=1
     int threadY=2
 
-int bufferBlue[15];
-int bufferRed[10];
+    int bufferBlue[15];
+    int bufferRed[10];
 
-int Blue_fill_ptr = 0;
-int Blue_use_ptr = 0;
-int Blue_count = 0;
+    int Blue_fill_ptr = 0;
+    int Blue_use_ptr = 0;
+    int Red_fill_ptr = 0;
+    int Red_use_ptr = 0;
 
-int Red_fill_ptr = 0;
-int Red_use_ptr = 0;
-int Red_count = 0;
+    int count=0;
+    int sequence=0;
+    int part;
 
-
-int sequence=0;
-int part;
-
-void put(int value) {
+void put() {
 
    if((collectedPart=fscanf(railway, "%d ", &part)) !=EOF){
     
@@ -95,7 +95,8 @@ void put(int value) {
     if(partsforA){
         bufferBlue[Blue_fill_ptr]=collectedPart;
         Blue_fill_ptr=(Blue_fill_ptr+1)%MAX_BLUE;
-    
+        count++;
+        
 
 
     }
@@ -105,6 +106,7 @@ void put(int value) {
 
         bufferRed[Blue_fill_ptr]=collectedPart;
         Red_fill_ptr=(Red_fill_ptr+1)%MAX_RED;
+        count++;
 
 
     }    
@@ -122,40 +124,103 @@ void put(int value) {
 
    }
 
+   bufferBlue[Blue_fill_ptr]=-1;
+   bufferRed[Red_fill_ptr]=-1;
 
 
-buffer[fill_ptr] = value;
-fill_ptr = (fill_ptr + 1) % MAX;
-count++;
+
 }
 
-int getBlue(int isthread) {
+int get(int isthread) {
 
     if(isthread==1){
 
     int Bluevalue=bufferBlue[Blue_use_ptr];    
-    fprintf(blueFile,"%d ", Bluevalue);
+    fprintf(blueFile,"%d", Bluevalue);
+    fprintf(blueFile,"%d", sequence);
+    printf("GET BLUE VALUE: %d  SEQUENCE #: %d\n\n", Bluevalue,sequence);
     use_ptr = (Blue_use_pt + 1) % MAX_BLUE;
-    printf("GET BLUE VALUE: %d", Bluevalue);
+    count--;
+    
 
     }
 
     else if(isthread==2){
 
-    int Redvalue=bufferBlue[Red_use_ptr];    
-    fprintf(redFile,"%d ", Redvalue);
+    int Redvalue=bufferRed[Red_use_ptr];    
+    fprintf(redFile,"%d", Redvalue);
+    fprintf(redFile,"%d", sequence);
+    printf("GET RED VALUE: %d  SEQUENCE #: %d\n\n", Redvalue,sequence);
     use_ptr = (Red_use_ptr + 1) % MAX_RED;
-    printf("GET RED VALUE: %d", Redvalue);    
-
+    count--;
 
     }
 
 }
 
 
+pthread_t mutex;
+pthread_cond_t empty,full;
+
+int rc=pthread_mutex_init(&mutex,NULL);
+assert(rc==-0);
+
+int erc=pthread_cond_init(&empty,NULL);
+assert(erc==0);
+int crc=pthread_cond_init(&full,NULL);
+assert(crc==0);
 
 
-int getRed(){
+
+void Pthread_lock( pthread_t *lock){
+    int rc= pthread_lock(lock);
+    assert(rc==0);
+
+
+}
+
+void Pthread_unlock(pthread_t *lock){
+    int rc=pthread_unlock(pthread_t lock);
+    assert(rc==0);
+
+
+}
+
+
+
+void *Producer(void *args){
+
+    int MaxbufferElement;
+
+
+    if( *isthread==threadX){
+
+        fill_ptr=Blue_fill_ptr;
+        MaxbufferElement=MAX_BLUE-1;
+
+
+
+    }
+
+    if(*isthread==threadY){
+
+        fill_ptr=Red_fill_ptr;
+        MaxbufferElement=MAX_RED-1;
+
+    }
+
+
+    Pthread_lock(&mutex);
+
+    while((count==MAX_BLUE-1)||(count==MAX_RED-1)){
+        phtread_cond_wait(&empty,&mutex);
+
+    }
+    put(*isthread);
+    sequence++;
+    pthread_cond_signal(&full,&mutex);
+    Pthread_unlock(&mutex);
+
 
 
 
@@ -164,6 +229,60 @@ int getRed(){
 
 
 
+
+
+
+
+
+
+
+void *Consumer(void *args){
+    int *isthread;
+    int fill_ptr;
+    int MaxbufferElement;
+
+
+    if( *isthread==threadX){
+        isthread=(int *) args;
+        
+
+
+
+    }
+
+    if(*isthread==threadY){
+        isthread=(int *) args;
+
+    }
+
+
+    Pthread_lock(&mutex);
+
+    while(count==MaxbufferElement){
+        phtread_cond_wait(&full,&mutex);
+
+    }
+    get(*isthread);
+    pthread_cond_signal(&empty,&mutex);
+
+    Pthread_unlock(&mutex);
+
+
+
+
+
+}
+
+
+
+
+
+void Producer(void *args){
+
+
+
+
+}
 
 
 
