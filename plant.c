@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <assert.h>
 
 #define MAX_BLUE 15
 #define MAX_RED 10  
@@ -25,17 +26,17 @@ char *blueFile="BlueDelivery.txt";
 char *redFile="RedDelivery.txt";
 
  if((railway=fopen(railFile,"r"))==NULL){
-    perror(Filename);
+    perror(railFile);
     exit(1);
  }
 
- if(blueDelivery=fopen(blueFile,"w")==NULL){
+ if((blueDelivery=fopen(blueFile,"w"))==NULL){
     perror(blueFile);
     exit(1);
 
  }
 
-if(redDelivery=fopen(redFile,"w")==NULL){
+if((redDelivery=fopen(redFile,"w"))==NULL){
     perror(redFile);
     exit(1);
 }
@@ -74,8 +75,8 @@ if(pid==0){
   printf("%s\n\n","child process is running...");
   printf("%s","child has finished...");
 
-    int threadX=1
-    int threadY=2
+    int threadX=1;
+    int threadY=2;
 
     int bufferBlue[15];
     int bufferRed[10];
@@ -85,15 +86,18 @@ if(pid==0){
     int Red_fill_ptr = 0;
     int Red_use_ptr = 0;
 
+    int collectedPart;
     int count=0;
     int sequence=0;
     int part;
+    int done=0;
+    int terminateProducers=0;
+    int terminateConsumers=0;
 
 void put() {
 
-    static done=0;
 
-   if((collectedPart=fscanf(railway, "%d ", &part)) !=EOF){
+   if(( collectedPart=fscanf(railway, "%d ", &part)) !=EOF || done==0){
     
 
     if(partsforA){
@@ -115,7 +119,7 @@ void put() {
 
     }    
 
-    else if (done==0){
+    else {
 
         bufferBlue[Blue_fill_ptr]=-1;
         Blue_fill_ptr=(Blue_fill_ptr+1)%MAX_BLUE;
@@ -126,14 +130,14 @@ void put() {
         Red_fill_ptr=(Red_fill_ptr+1)%MAX_RED;
         
         count++;
-        done++;
+        terminateProducers++;
 
     } 
 
-    else{
+    //else{
 
         
-    }
+    //}
 
 
 
@@ -142,8 +146,8 @@ void put() {
 
    }
 
-   bufferBlue[Blue_fill_ptr]=-1;
-   bufferRed[Red_fill_ptr]=-1;
+   //bufferBlue[Blue_fill_ptr]=-1;
+   //bufferRed[Red_fill_ptr]=-1;
 
 
 
@@ -154,10 +158,10 @@ int get(int isthread) {
     if(isthread==1){
 
     int Bluevalue=bufferBlue[Blue_use_ptr];    
-    fprintf(blueFile,"assembly part:%d,", Bluevalue);
-    fprintf(blueFile,"sequence #:%d  ", sequence);
+    fprintf(blueDelivery,"assembly part:%d,", Bluevalue);
+    fprintf(blueDelivery,"sequence #:%d  ", sequence);
     printf("GET BLUE VALUE: %d  SEQUENCE #: %d\n\n", Bluevalue,sequence);
-    use_ptr = (Blue_use_pt + 1) % MAX_BLUE;
+    Blue_use_ptr = (Blue_use_ptr + 1) % MAX_BLUE;
     count--;
     
 
@@ -166,10 +170,10 @@ int get(int isthread) {
     else if(isthread==2){
 
     int Redvalue=bufferRed[Red_use_ptr];    
-    fprintf(redFile,"assembly part:%d,", Redvalue);
-    fprintf(redFile,"sequence #:%d  ",, sequence);
+    fprintf(redDelivery,"assembly part:%d,", Redvalue);
+    fprintf(redDelivery,"sequence #:%d  ", sequence);
     printf("GET RED VALUE: %d  SEQUENCE #: %d\n\n", Redvalue,sequence);
-    use_ptr = (Red_use_ptr + 1) % MAX_RED;
+    Red_use_ptr = (Red_use_ptr + 1) % MAX_RED;
     count--;
 
     }
@@ -181,7 +185,7 @@ pthread_mutex_t mutex;
 pthread_cond_t empty,full;
 
 int rc=pthread_mutex_init(&mutex,NULL);
-assert(rc==-0);
+assert(rc==0);
 
 int erc=pthread_cond_init(&empty,NULL);
 assert(erc==0);
@@ -191,14 +195,14 @@ assert(crc==0);
 
 
 void Pthread_lock( pthread_mutex_t *lock){
-    int rc= pthread_lock(lock);
+    int rc= pthread_mutex_lock(lock);
     assert(rc==0);
 
 
 }
 
 void Pthread_unlock(pthread_mutex_t *lock){
-    int rc=pthread_unlock( lock);
+    int rc=pthread_mutex_unlock( lock);
     assert(rc==0);
 
 
@@ -207,17 +211,17 @@ void Pthread_unlock(pthread_mutex_t *lock){
 
 
 void *Producer(void *args){
-    while(termination!=-1){
+    while(terminateProducers!=1){
 
     Pthread_lock(&mutex);
 
     while((count==MAX_BLUE-1)||(count==MAX_RED-1)){
-        phtread_cond_wait(&empty,&mutex);
+        pthread_cond_wait(&empty,&mutex);
 
     }
     put(*isthread);
     sequence++;
-    pthread_cond_signal(&full,&mutex);
+    pthread_cond_signal(&full);
     Pthread_unlock(&mutex);
 
 
@@ -234,7 +238,7 @@ void *Producer(void *args){
 
 void *Consumer(void *args){
 
-    while(termination!=-1){
+    while(terminateConsumers!=1){
 
     int *isthread;
     int fill_ptr;
@@ -257,12 +261,12 @@ void *Consumer(void *args){
 
     Pthread_lock(&mutex);
 
-    while(count==MaxbufferElement){
+    while(count==0){
         phtread_cond_wait(&full,&mutex);
 
     }
     get(*isthread);
-    pthread_cond_signal(&empty,&mutex);
+    pthread_cond_signal(&empty);
 
     Pthread_unlock(&mutex);
 
@@ -274,7 +278,7 @@ void *Consumer(void *args){
 }
 
 void Pthread_create(pthread_t *p, const pthread_attr_t  *attr, void * (threadFunction) (void *), void *arg ){
-    int rc=pthread(p,attr,threadFunction,arg);
+    int rc=pthread_create(p,attr,threadFunction,arg);
     assert(rc==0);
 
 }
@@ -286,6 +290,13 @@ Pthread_create(ThreadR,NULL,Producer,NULL);
 
 Pthread_create(ThreadX,NULL,Producer,threadX);
 Pthread_create(ThreadY,NULL,Producer,threadY);
+
+
+pthread_join(ThreadL,NULL);
+pthread_join(ThreadR,NULL);
+pthread_join(ThreadX,NULL);
+pthread_join(ThreadY,NULL);
+printf("%s","End Child...");
 
 
 
@@ -302,7 +313,7 @@ else if(pid>0){
     printf("%s\n\n","parent process waiting...");
     wait(NULL);
     printf("%s","parent has finished...");
-
+    return 0;
 //parent
 
 
@@ -314,7 +325,7 @@ else if(pid>0){
 
 else{
 
-perror();
+perror("fork failed");
 
 }
 
@@ -333,3 +344,8 @@ perror();
 
     return 0;
 }
+
+
+
+//notes
+//can a process be terminated before threads complete (view book)?
