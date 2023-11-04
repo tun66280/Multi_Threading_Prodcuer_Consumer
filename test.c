@@ -106,6 +106,7 @@ int put() {
         bufferBlue[Blue_fill_ptr].part=part;
         bufferBlue[Blue_fill_ptr].sequence=sequence;
         Blue_fill_ptr=(Blue_fill_ptr+1)%MAX_BLUE;
+        //    printf("%s\n","increment count");
         count1++;
         return 0;    
 
@@ -116,6 +117,8 @@ int put() {
         bufferRed[Red_fill_ptr].part=part;
         bufferRed[Red_fill_ptr].sequence=sequence;
         Red_fill_ptr=(Red_fill_ptr+1)%MAX_RED;
+      //   printf("%s\n","increment count");
+
         count2++;
 
         return 0;
@@ -151,6 +154,8 @@ int get(int isthread) {
     int Bluevalue=bufferBlue[Blue_use_ptr].part;
     int sequenceval=bufferBlue[Blue_use_ptr].sequence;
     Blue_use_ptr = (Blue_use_ptr + 1) % MAX_BLUE;
+     //    printf("%s\n","decrement count");
+
     count1--;
 
     fprintf(blueDelivery,"assembly part:%d,", Bluevalue);
@@ -170,6 +175,8 @@ int get(int isthread) {
     int Redvalue=bufferRed[Red_use_ptr].part;  
     int sequenceval=bufferRed[Red_use_ptr].sequence;  
     Red_use_ptr = (Red_use_ptr + 1) % MAX_RED;
+   //  printf("%s\n","decrement count");
+
     count2--;     
 
 
@@ -181,6 +188,11 @@ int get(int isthread) {
     if(Redvalue==-1){
         return 1;
     }
+    }
+
+
+    else{
+        printf("%s","what happned!!!?????");
     }
 
 
@@ -263,6 +275,7 @@ void *Producer(void *args){
     
 
     while((count1==MAX_BLUE)||(count2==MAX_RED)){
+        printf("\n%s\n","Producer is SLEEPING");
         pthread_cond_wait(&empty,&mutex);
 
     }
@@ -275,6 +288,7 @@ void *Producer(void *args){
 
 }
     Pthread_unlock(&mutex);
+    printf("Producer Exit\n");
 
 }
 
@@ -283,20 +297,33 @@ void *Producer(void *args){
 
 
 void *Consumer(void *args){
-            printf("HELLO WORLD\n");
-
-    while(terminateConsumers<2){
+    int *count;
 
     int *isthread=(int *)args;
     int fill_ptr;
     int MaxbufferElement;
+    int threadFinished;
 
 
+    if(*isthread==1){
+         count=&count1;
+         threadFinished=0;
+    }
 
+    else{
+        threadFinished=0;
+         count=&count2;
+    }
+
+    printf("(thread %d\n)",*isthread);
 
     Pthread_lock(&mutex);
 
-    while(count1==0 || count2==0){
+    while(terminateConsumers<2){
+
+
+    while(*count==0){
+        printf("(thread %d), %s\n",*isthread,"Consumer is SLEEPING");
         pthread_cond_wait(&full,&mutex);
 
     }
@@ -311,18 +338,10 @@ void *Consumer(void *args){
 
 
 }
+    Pthread_unlock(&mutex);
 
 
-
-
-
-
-
-
-
-
-
-
+printf("%s","thread exits");
 }
 
 
