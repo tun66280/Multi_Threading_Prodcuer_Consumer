@@ -23,7 +23,7 @@ FILE *railway;
 FILE *blueDelivery;
 FILE *redDelivery;
 
-char *railFile="railtest.txt";
+char *railFile="railwayCars.txt";
 char *blueFile="BlueDelivery.txt";
 char *redFile="RedDelivery.txt";
 
@@ -59,7 +59,7 @@ return 0;
 int partsforB(int num){
     if(num>=13 && num<=25){
 
-        return 1;
+        return 2;
     }
     return 0;
     
@@ -79,8 +79,8 @@ int partsforB(int num){
     int sequence;
     };
 
-struct BufferItem bufferBlue[15];
-struct BufferItem bufferRed[10];
+struct BufferItem bufferBlue[15]={0};
+struct BufferItem bufferRed[10]={0};
 
     int Blue_fill_ptr = 0;
     int Blue_use_ptr = 0;
@@ -96,9 +96,9 @@ struct BufferItem bufferRed[10];
     int terminateProducers=0;
     int terminateConsumers=0;
 
-int put() {
+int put(int part) {
 
-   if(( collectedPart=fscanf(railway, "%d ", &part)) !=EOF){
+   if(collectedPart!=EOF){
     
     printf("%s\n","PUT METHOD IS INDEED CALLED");
 
@@ -132,9 +132,11 @@ int put() {
 
         
         bufferBlue[Blue_fill_ptr].part=-1;
+        bufferBlue[Blue_fill_ptr].sequence=sequence;
         Blue_fill_ptr=(Blue_fill_ptr+1)%MAX_BLUE;
 
         bufferRed[Red_fill_ptr].part=-1;
+        bufferRed[Red_fill_ptr].sequence=sequence;
         Red_fill_ptr=(Red_fill_ptr+1)%MAX_RED;
         
         count1++;
@@ -201,9 +203,9 @@ return 0;
 
 
 
-void CompleteProduction(int (*putMethod)()){
+void CompleteProduction(int (*putMethod)(int ), int *part){
 
-if(putMethod()==1){
+if(putMethod(*part)==1){
     terminateProducers++;
 }
 
@@ -211,11 +213,14 @@ if(putMethod()==1){
 
 }
 
-void setCompletion(int (*getMethod)(int),int arg){
+void setCompletion(int (*getMethod)(int), int arg,int *p_arg){
 
 if(getMethod(arg)==1){
-    terminateConsumers++;
+        printf("value of threadfinish before  is: %d\n\n",*p_arg);
 
+    terminateConsumers++;
+    (*p_arg)++;
+    printf("value of threadfinish after is is: %d\n\n",*p_arg);
 }
 
 
@@ -265,31 +270,66 @@ void Pthread_unlock(pthread_mutex_t *lock){
 
 
 
-void *Producer(void *args){
-        printf("HELLO WORLD\n");
 
-    Pthread_lock(&mutex);
+
+
+
+
+void *Producer(void *args){
+    printf("HELLO WORLD\n");
+    int *count=0;
+    int partType;
+    int MaxbufferElement=100;
+    while(terminateProducers<1){ //prevent race condiition
+    
+
+        Pthread_lock(&mutex);
+
+
+
+
 
     while(terminateProducers<1){
 
+        collectedPart=fscanf(railway, "%d ",&part);
+        
+
+
+        if( partsforA(part)==1){
+             partType=part;
+            count=&count1;
+            MaxbufferElement=MAX_BLUE;
+        }
+
+        else{
+             partType=part;
+            count=&count2;
+            MaxbufferElement=MAX_RED;
+        }
+        
+
+
     
 
-    while((count1==MAX_BLUE)||(count2==MAX_RED)){
+    while(*count==MaxbufferElement){
         printf("\n%s\n","Producer is SLEEPING");
         pthread_cond_wait(&empty,&mutex);
+        printf("\n%s\n","Producer WAKES up ");
+
+
 
     }
-     CompleteProduction(put);
+     CompleteProduction(put,&partType);
     sequence++;
     pthread_cond_signal(&full);
     Pthread_unlock(&mutex);
-
-
+    printf("\nProducer Exit\n");
+    break;
 
 }
-    Pthread_unlock(&mutex);
-    printf("Producer Exit\n");
+    
 
+}
 }
 
 
@@ -302,7 +342,7 @@ void *Consumer(void *args){
     int *isthread=(int *)args;
     int fill_ptr;
     int MaxbufferElement;
-    int threadFinished;
+    int threadFinished=0;
 
 
     if(*isthread==1){
@@ -317,31 +357,38 @@ void *Consumer(void *args){
 
     printf("(thread %d\n)",*isthread);
 
-    Pthread_lock(&mutex);
+    while(threadFinished<1){
 
+    Pthread_lock(&mutex);
+    printf("\ndebug\n");
     while(terminateConsumers<2){
+            if(threadFinished==1){break;}
 
 
     while(*count==0){
         printf("(thread %d), %s\n",*isthread,"Consumer is SLEEPING");
         pthread_cond_wait(&full,&mutex);
+        printf("(thread %d), %s\n",*isthread,"Consumer WAKES up");
+
 
     }
 
-    setCompletion(get,*isthread);
+    setCompletion(get,*isthread,&threadFinished);
 
     pthread_cond_signal(&empty);
 
+
+
+
     Pthread_unlock(&mutex);
-
-
-
+    break;
 
 }
-    Pthread_unlock(&mutex);
-
 
 printf("%s","thread exits");
+    }
+
+//printf("%s","thread exits");
 }
 
 
