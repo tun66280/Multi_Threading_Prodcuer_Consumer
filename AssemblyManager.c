@@ -1,3 +1,7 @@
+//Welcome to the Assembly center! This .c file assembles the parts and ships them off
+//to their affiliated delivery trucks!
+
+
 #include <sys/types.h>
 #include <dirent.h>
 #include <stdlib.h>
@@ -16,17 +20,7 @@
 #define MAX_BLUE 15 //max buffer size for  blue 
 #define MAX_RED 10  // max buffer size for red 
 
-/*
 
-FILE *railway;
-FILE *blueDelivery;
-FILE *redDelivery;
-
-char *railFile="railwayCars.txt";
-char *blueFile="BlueDelivery.txt";
-char *redFile="RedDelivery.txt";
-
-*/
 
 
 
@@ -92,9 +86,8 @@ struct BufferItem bufferRed[10]={0};
     int count2=0;
     int sequence=1;
     int part;
-    int done=0;
-    int terminateProducers=0;
-    int terminateConsumers=0;
+    
+   
 
 int put(int part) { //puts part into buffer based on part type
 
@@ -145,7 +138,7 @@ int put(int part) { //puts part into buffer based on part type
 
     } 
     
-
+return 5;
 
 }
 
@@ -203,15 +196,6 @@ return 0;
 
 
 
-void CompleteProduction(int (*putMethod)(int ), int *part){ // calls and checks retval of put() and deterimines whether to increment termination variable
-
-if(putMethod(*part)==1){
-    terminateProducers++;
-}
-
-
-
-}
 
 
 
@@ -262,7 +246,6 @@ void *Producer(void *args){ //thread producer function
     int MaxbufferElement=100;
     int threadFinished=0;
     int *isthread=(int *)args;
-    int read=0;
 
 
     while(1){ //prevent race condiition
@@ -305,24 +288,23 @@ void *Producer(void *args){ //thread producer function
         threadFinished=1;
 
     }
-        read++;
 
 
      if(*isthread==threadL){
-        if(read==25){
+
             sleep(.25);
-            read=0;
-        }
+            
+        
 
 
     }
 
     if(*isthread==threadR){
-        if(read==15){
-            sleep(.5);
-            read=0;
+    
+        sleep(.5);
+            
         }
-    }
+    
     
         sequence++;
     pthread_cond_signal(&full);
@@ -347,7 +329,6 @@ void *Consumer(void *args){ // Consumer method
     int *count;
 
     int *isthread=(int *)args; //get thread signature 
-    int fill_ptr;
     int threadFinished=0; // checks if thread has terminated
 
 
@@ -384,6 +365,8 @@ void *Consumer(void *args){ // Consumer method
         threadFinished=1;
 
     }
+
+    sleep(.2);
 
     pthread_cond_signal(&empty); //signal that buffer isnt full
 

@@ -1,3 +1,7 @@
+// Welcome to the fabrication plant! This .c file opens the read and write files, and also creates 
+// a new child process!
+
+
 #include <sys/types.h>
 #include <dirent.h>
 #include <stdlib.h>
@@ -79,7 +83,7 @@ if(Pid==0){
 
 char *args[] = { new_railway_fd_str, new_blueDelivery_fd_str, new_redDelivery_fd_str, NULL};
 
-execv("/home/TU/tun66280/3207 C Projects/project-2-f23-tun66280/assembly",args);
+execv("./assembly",args);
 perror("execv");
 return 1;
 
